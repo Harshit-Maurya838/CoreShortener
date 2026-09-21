@@ -36,7 +36,7 @@ public class AuthService {
         User user = User.builder()
                 .tenantId(req.tenantId())
                 .email(req.email())
-                .password_hash(passwordEncoder.encode(req.password()))
+                .passwordHash(passwordEncoder.encode(req.password()))
                 .role(Role.MEMBER)
                 .build();
 

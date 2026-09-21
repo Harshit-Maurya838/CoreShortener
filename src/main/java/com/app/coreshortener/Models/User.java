@@ -19,14 +19,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name="tenant_id" ,nullable = false)
+    @Column(name = "tenant_id", nullable = false)
     private UUID tenantId;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String password_hash;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

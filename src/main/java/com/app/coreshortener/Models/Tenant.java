@@ -19,7 +19,7 @@ public class Tenant {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(unique = true, nullable = false)

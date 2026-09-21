@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - shortener_net
 
   redis:
     image: redis:7-alpine
@@ -31,6 +33,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - shortener_net
 
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -42,6 +46,12 @@ services:
       - "8081:8081"
     depends_on:
       - redis
+    networks:
+      - shortener_net
+
+networks:
+  shortener_net:
+    driver: bridge
 
 volumes:
   postgres_data:
