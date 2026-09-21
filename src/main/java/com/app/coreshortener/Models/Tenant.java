@@ -16,7 +16,7 @@ import java.util.UUID;
 @Builder
 public class Tenant {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(unique = true, length = 100)
