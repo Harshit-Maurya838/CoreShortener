@@ -1,5 +1,6 @@
 package com.app.coreshortener.security.services;
 
+import com.app.coreshortener.Models.Role;
 import com.app.coreshortener.Models.User;
 import com.app.coreshortener.Repository.UserRepository;
 import com.app.coreshortener.auth.AuthenticationRequest;
@@ -30,7 +31,7 @@ public class AuthService {
                 .tenantId(req.tenantId())
                 .email(req.email())
                 .password_hash(passwordEncoder.encode(req.password()))
-                .role(req.role())
+                .role(Role.MEMBER)
                 .build();
 
         userRepository.save(user);

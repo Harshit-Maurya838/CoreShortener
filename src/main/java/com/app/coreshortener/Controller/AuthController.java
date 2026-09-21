@@ -4,6 +4,7 @@ import com.app.coreshortener.auth.AuthenticationRequest;
 import com.app.coreshortener.auth.AuthenticationResponse;
 import com.app.coreshortener.auth.RegisterRequest;
 import com.app.coreshortener.security.services.AuthService;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +17,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthenticationResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthenticationResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.ok(authService.register(request));
     }
 
