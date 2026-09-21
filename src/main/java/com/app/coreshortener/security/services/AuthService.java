@@ -2,9 +2,11 @@ package com.app.coreshortener.security.services;
 
 import com.app.coreshortener.Models.Role;
 import com.app.coreshortener.Models.User;
+import com.app.coreshortener.Repository.TenantRepository;
 import com.app.coreshortener.Repository.UserRepository;
 import com.app.coreshortener.auth.AuthenticationRequest;
 import com.app.coreshortener.auth.AuthenticationResponse;
+import com.app.coreshortener.auth.RefreshTokenRequest;
 import com.app.coreshortener.auth.RegisterRequest;
 import com.app.coreshortener.security.domain.UserAdapter;
 import com.app.coreshortener.security.jwt.JwtService;
@@ -18,13 +20,17 @@ import org.springframework.stereotype.Service;
 @AllArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authManager;
 
-    public AuthenticationResponse register(RegisterRequest req){
-        if(userRepository.existsByEmail(req.email())){
-            throw new IllegalArgumentException("Email Already exists");
+    public AuthenticationResponse register(RegisterRequest req) {
+        if (!tenantRepository.existsById(req.tenantId())) {
+            throw new IllegalArgumentException("Tenant does not exist with ID: " + req.tenantId());
+        }
+        if (userRepository.existsByEmail(req.email())) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
         User user = User.builder()
@@ -35,8 +41,11 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-        String jwtToken = jwtService.generateToken(new UserAdapter(user));
-        return new AuthenticationResponse(jwtToken);
+        UserAdapter userAdapter = new UserAdapter(user);
+        String accessToken = jwtService.generateAccessToken(userAdapter);
+        String refreshToken = jwtService.generateRefreshToken(userAdapter);
+
+        return new AuthenticationResponse(accessToken, refreshToken, 900);
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest req) {
@@ -47,7 +56,28 @@ public class AuthService {
         User user = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
-        String jwtToken = jwtService.generateToken(new UserAdapter(user));
-        return new AuthenticationResponse(jwtToken);
+        UserAdapter userAdapter = new UserAdapter(user);
+        String accessToken = jwtService.generateAccessToken(userAdapter);
+        String refreshToken = jwtService.generateRefreshToken(userAdapter);
+
+        return new AuthenticationResponse(accessToken, refreshToken, 900);
+    }
+
+    public AuthenticationResponse refreshToken(RefreshTokenRequest req) {
+        String token = req.refreshToken();
+        if (!jwtService.isRefreshToken(token)) {
+            throw new IllegalArgumentException("Invalid token type. Expected refresh token.");
+        }
+        String userEmail = jwtService.extractUsername(token);
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        UserAdapter userAdapter = new UserAdapter(user);
+        if (!jwtService.isTokenValid(token, userAdapter)) {
+            throw new IllegalArgumentException("Refresh token is expired or invalid");
+        }
+
+        String newAccessToken = jwtService.generateAccessToken(userAdapter);
+        return new AuthenticationResponse(newAccessToken, token, 900);
     }
 }

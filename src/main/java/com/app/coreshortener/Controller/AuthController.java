@@ -2,6 +2,7 @@ package com.app.coreshortener.Controller;
 
 import com.app.coreshortener.auth.AuthenticationRequest;
 import com.app.coreshortener.auth.AuthenticationResponse;
+import com.app.coreshortener.auth.RefreshTokenRequest;
 import com.app.coreshortener.auth.RegisterRequest;
 import com.app.coreshortener.security.services.AuthService;
 import jakarta.validation.Valid;
@@ -22,7 +23,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthenticationResponse> authenticate(@RequestBody AuthenticationRequest request) {
+    public ResponseEntity<AuthenticationResponse> authenticate(@Valid @RequestBody AuthenticationRequest request) {
         return ResponseEntity.ok(authService.authenticate(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 }
