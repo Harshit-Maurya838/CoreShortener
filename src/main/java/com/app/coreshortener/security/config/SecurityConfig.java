@@ -50,8 +50,8 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/{shortCode:[a-zA-Z0-9_-]{3,20}}").permitAll()
                         .requestMatchers("/api/v1/urls/**", "/urls/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/{shortCode:[a-zA-Z0-9_-]{3,20}}").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

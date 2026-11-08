@@ -4,9 +4,11 @@ import com.app.coreshortener.auth.AuthenticationRequest;
 import com.app.coreshortener.auth.AuthenticationResponse;
 import com.app.coreshortener.auth.RefreshTokenRequest;
 import com.app.coreshortener.auth.RegisterRequest;
+import com.app.coreshortener.auth.RegisterTenantRequest;
 import com.app.coreshortener.security.services.AuthService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +18,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register-tenant")
+    public ResponseEntity<AuthenticationResponse> registerTenant(@Valid @RequestBody RegisterTenantRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerTenant(request));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(@Valid @RequestBody RegisterRequest request) {

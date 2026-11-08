@@ -1,6 +1,7 @@
 package com.app.coreshortener.security.services;
 
 import com.app.coreshortener.Models.Role;
+import com.app.coreshortener.Models.Tenant;
 import com.app.coreshortener.Models.User;
 import com.app.coreshortener.Repository.TenantRepository;
 import com.app.coreshortener.Repository.UserRepository;
@@ -8,6 +9,7 @@ import com.app.coreshortener.auth.AuthenticationRequest;
 import com.app.coreshortener.auth.AuthenticationResponse;
 import com.app.coreshortener.auth.RefreshTokenRequest;
 import com.app.coreshortener.auth.RegisterRequest;
+import com.app.coreshortener.auth.RegisterTenantRequest;
 import com.app.coreshortener.security.domain.UserAdapter;
 import com.app.coreshortener.security.jwt.JwtService;
 import lombok.AllArgsConstructor;
@@ -15,16 +17,48 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
 public class AuthService {
+    private static final String DEFAULT_PLAN = "FREE";
+
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authManager;
 
+    // Creates a new tenant and its first user as ADMIN in a single transaction.
+    @Transactional
+    public AuthenticationResponse registerTenant(RegisterTenantRequest req) {
+        if (userRepository.existsByEmail(req.email())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        Tenant tenant = Tenant.builder()
+                .name(req.tenantName().trim())
+                .apiKey(UUID.randomUUID().toString().replace("-", ""))
+                .plan(DEFAULT_PLAN)
+                .build();
+        tenant = tenantRepository.save(tenant);
+
+        User admin = User.builder()
+                .tenantId(tenant.getId())
+                .email(req.email())
+                .passwordHash(passwordEncoder.encode(req.password()))
+                .role(Role.ADMIN)
+                .build();
+        userRepository.save(admin);
+
+        return buildTokens(new UserAdapter(admin));
+    }
+
+    // Registers a MEMBER user inside an existing tenant.
+    @Transactional
     public AuthenticationResponse register(RegisterRequest req) {
         if (!tenantRepository.existsById(req.tenantId())) {
             throw new IllegalArgumentException("Tenant does not exist with ID: " + req.tenantId());
@@ -41,11 +75,7 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-        UserAdapter userAdapter = new UserAdapter(user);
-        String accessToken = jwtService.generateAccessToken(userAdapter);
-        String refreshToken = jwtService.generateRefreshToken(userAdapter);
-
-        return new AuthenticationResponse(accessToken, refreshToken, 900);
+        return buildTokens(new UserAdapter(user));
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest req) {
@@ -56,11 +86,7 @@ public class AuthService {
         User user = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
-        UserAdapter userAdapter = new UserAdapter(user);
-        String accessToken = jwtService.generateAccessToken(userAdapter);
-        String refreshToken = jwtService.generateRefreshToken(userAdapter);
-
-        return new AuthenticationResponse(accessToken, refreshToken, 900);
+        return buildTokens(new UserAdapter(user));
     }
 
     public AuthenticationResponse refreshToken(RefreshTokenRequest req) {
@@ -78,6 +104,12 @@ public class AuthService {
         }
 
         String newAccessToken = jwtService.generateAccessToken(userAdapter);
-        return new AuthenticationResponse(newAccessToken, token, 900);
+        return new AuthenticationResponse(newAccessToken, token, jwtService.getAccessTokenExpirationSeconds());
+    }
+
+    private AuthenticationResponse buildTokens(UserAdapter userAdapter) {
+        String accessToken = jwtService.generateAccessToken(userAdapter);
+        String refreshToken = jwtService.generateRefreshToken(userAdapter);
+        return new AuthenticationResponse(accessToken, refreshToken, jwtService.getAccessTokenExpirationSeconds());
     }
 }

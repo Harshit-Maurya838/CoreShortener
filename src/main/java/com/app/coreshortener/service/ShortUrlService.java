@@ -14,6 +14,7 @@ import com.app.coreshortener.security.domain.UserAdapter;
 import com.app.coreshortener.util.ShortCodeGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,10 +38,7 @@ public class ShortUrlService {
 
     @Transactional
     public ShortUrlResponse createShortUrl(CreateShortUrlRequest request) {
-        UUID tenantId = TenantContext.getTenantId();
-        if (tenantId == null) {
-            throw new IllegalStateException("Tenant context is missing");
-        }
+        UUID tenantId = getRequiredTenantId();
 
         UserAdapter currentUser = getCurrentUser();
         UUID userId = currentUser != null ? currentUser.getId() : null;
@@ -68,8 +66,12 @@ public class ShortUrlService {
                 .isActive(true)
                 .build();
 
-        ShortUrl saved = shortURLRepository.save(shortUrl);
-        return mapToResponse(saved);
+        try {
+            ShortUrl saved = shortURLRepository.saveAndFlush(shortUrl);
+            return mapToResponse(saved);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ShortCodeConflictException("Short code '" + shortCode + "' is already in use");
+        }
     }
 
     @Transactional(readOnly = true)
